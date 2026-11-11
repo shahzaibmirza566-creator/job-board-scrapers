@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/shahzaibmirza566-creator/job-board-scrapers/actions/workflows/ci.yml/badge.svg)](https://github.com/shahzaibmirza566-creator/job-board-scrapers/actions/workflows/ci.yml)
 
-Incremental job-listing crawlers for **ZipRecruiter** and **Monster**, built with Scrapy.
+Incremental job-listing crawlers for **ZipRecruiter**, **Monster**, **Indeed** and **Glassdoor**, built with Scrapy.
 A reference implementation of a production pattern I use for recurring scraping jobs:
 crawl daily, **never re-fetch what you already have**, and store everything in one normalised schema.
 
@@ -11,13 +11,15 @@ crawl daily, **never re-fetch what you already have**, and store everything in o
 - **Incremental crawling.** A SQLite store with `UNIQUE(source, source_id)` is checked *before* a
   detail page is requested, so a daily run only fetches new jobs. Pagination stops after
   `MAX_KNOWN_JOBS_PER_QUERY` already-seen jobs.
-- **Two extraction styles in one project.** ZipRecruiter is HTML (listing cards + detail pages);
-  Monster is a JSON search API whose client key is read from the page's `__NEXT_DATA__`.
+- **Four sources, three extraction styles.** ZipRecruiter is HTML (listing cards + detail pages);
+  Monster is a JSON search API whose client key is read from the page's `__NEXT_DATA__`;
+  Indeed batches descriptions (one request per results page, not per job); Glassdoor resolves each
+  location to an id once, then pages through listings.
 - **Clean separation.** Parsing is pure functions in `parsers.py` (unit-tested without a network);
   spiders only orchestrate requests; the pipeline only persists.
 - **Config from the environment.** No secrets in code. Optional ScrapingBee routing is switched on by
   setting one variable.
-- **Tests + CI.** 22 tests (parsers, storage, pipeline, and spider flows with fabricated responses).
+- **Tests + CI.** 39 tests (parsers, storage, pipeline, and spider flows with fabricated responses).
 
 ## Architecture
 
@@ -25,7 +27,7 @@ crawl daily, **never re-fetch what you already have**, and store everything in o
 keywords x locations
         |
         v
-   Spider (monster / ziprecruiter)
+   Spider (monster / ziprecruiter / indeed / glassdoor)
         |  skips jobs already in SQLite (JobStore.exists)
         v
    JobItem  -->  CleanTextPipeline  -->  SqliteJobPipeline  -->  data/jobs.db
@@ -38,7 +40,7 @@ jobscrapers/
   parsers.py     pure functions: payload builders, job/card parsers, salary formatting
   jobstore.py    SQLite store (idempotent inserts, existence checks)
   pipelines.py   text cleaning + persistence, stats: jobs/new, jobs/duplicate
-  spiders/       base.py (queries, request factory) , monster.py , ziprecruiter.py
+  spiders/       base.py (queries, request factory) , monster.py , ziprecruiter.py , indeed.py , glassdoor.py
   settings.py    all configuration, read from environment variables
 tests/           parser, store, pipeline and spider tests
 ```
@@ -55,6 +57,10 @@ scrapy crawl ziprecruiter -a keywords="python developer,data engineer" -a locati
 
 # Monster (needs MONSTER_API_KEY in .env)
 scrapy crawl monster -a keywords="data engineer" -a locations="Texas" -a max_pages=5
+
+# Indeed and Glassdoor
+scrapy crawl indeed -a keywords="data engineer" -a locations="Texas"
+scrapy crawl glassdoor -a keywords="data engineer" -a locations="Texas"
 ```
 
 Results are written to `data/jobs.db` (table `jobs`). Re-running the same command only adds new jobs.
@@ -68,6 +74,7 @@ sqlite3 data/jobs.db "select source, count(*) from jobs group by source;"
 | Variable | Purpose | Default |
 |---|---|---|
 | `SCRAPINGBEE_API_KEY` | Route requests through ScrapingBee (optional) | empty (plain Scrapy) |
+| `ZYTE_SMARTPROXY_APIKEY` | Route requests through Zyte Smart Proxy Manager (optional) | empty |
 | `MONSTER_API_KEY` | Public key Monster's web client sends (copy from the browser network tab) | required for `monster` |
 | `DB_PATH` | SQLite file | `data/jobs.db` |
 | `ROBOTSTXT_OBEY` | Respect robots.txt | `true` |
@@ -90,7 +97,7 @@ pytest
 - Use it responsibly: respect each site's terms of service and robots.txt, rate-limit your crawls,
   and handle any personal data in line with the law that applies to you.
 - Client-specific integrations from the original project (a private job API, cloud screenshot upload,
-  a proxy list) were removed on purpose; storage here is a local SQLite file.
+  a proxy list, a screenshot spider) were removed on purpose; storage here is a local SQLite file.
 
 ## License
 

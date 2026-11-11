@@ -2,3 +2,5 @@ scrapy>=2.11,<3
 python-dotenv>=1.0
 # Optional: only used when SCRAPINGBEE_API_KEY is set
 scrapy-scrapingbee>=0.0.3
+# Optional: only used when ZYTE_SMARTPROXY_APIKEY is set
+scrapy-zyte-smartproxy>=2.3

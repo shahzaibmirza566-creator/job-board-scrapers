@@ -46,10 +46,16 @@ USER_AGENT = os.getenv(
 )
 
 # --- Optional rendering / proxy provider (ScrapingBee) ----------------------
-# Leave empty to use plain Scrapy requests.
+# Leave both empty to use plain Scrapy requests.
 SCRAPINGBEE_API_KEY = os.getenv("SCRAPINGBEE_API_KEY", "")
+ZYTE_SMARTPROXY_APIKEY = os.getenv("ZYTE_SMARTPROXY_APIKEY", "")
+
+DOWNLOADER_MIDDLEWARES = {}
 if SCRAPINGBEE_API_KEY:
-    DOWNLOADER_MIDDLEWARES = {"scrapy_scrapingbee.ScrapingBeeMiddleware": 725}
+    DOWNLOADER_MIDDLEWARES["scrapy_scrapingbee.ScrapingBeeMiddleware"] = 725
+if ZYTE_SMARTPROXY_APIKEY:
+    ZYTE_SMARTPROXY_ENABLED = True
+    DOWNLOADER_MIDDLEWARES["scrapy_zyte_smartproxy.ZyteSmartProxyMiddleware"] = 610
 
 # --- Storage ----------------------------------------------------------------
 DB_PATH = os.getenv("DB_PATH", "data/jobs.db")
@@ -77,6 +83,13 @@ ZIPRECRUITER_SEARCH_URL = (
     "https://www.ziprecruiter.com/candidate/search"
     "?days=1&radius=100&no_header_footer=1&location={location}&page={page}&search={keyword}"
 )
+
+INDEED_LISTING_URL = "https://www.indeed.com/jobs?q={keyword}&l={location}&fromage=1"
+INDEED_DESCRIPTION_URL = "https://www.indeed.com/rpc/jobdescs?jks={ids}"
+GLASSDOOR_LOCATION_URL = (
+    "https://www.glassdoor.com/findPopularLocationAjax.htm?term={location}&maxLocationsToReturn=10"
+)
+GLASSDOOR_LISTING_URL = "https://www.glassdoor.com/Job/jobs.htm?sc.keyword={keyword}&locT=S&locId={location_id}"
 
 # Default queries when none are passed with -a keywords=... -a locations=...
 DEFAULT_KEYWORDS = ["python developer"]
