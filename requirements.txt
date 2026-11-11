@@ -1,0 +1,4 @@
+scrapy>=2.11,<3
+python-dotenv>=1.0
+# Optional: only used when SCRAPINGBEE_API_KEY is set
+scrapy-scrapingbee>=0.0.3
